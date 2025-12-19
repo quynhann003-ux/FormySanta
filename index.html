@@ -290,9 +290,9 @@
             container.appendChild(renderer.domElement);
 
             // Vandiep
-            groupGold = createParticleSystem('gold', CONFIG.goldCount, 2.0);
-            groupRed = createParticleSystem('red', CONFIG.redCount, 3.5); // Vandiep
-            groupGift = createParticleSystem('gift', CONFIG.giftCount, 3.0); // Vandiep
+            groupGold = createParticleSystem('gold', CONFIG.goldCount, 3.0);
+            groupRed = createParticleSystem('red', CONFIG.redCount, 2.5); // Vandiep
+            groupGift = createParticleSystem('gift', CONFIG.giftCount, 2.0); // Vandiep
 
             createPhotos();
             createDecorations();
@@ -418,8 +418,8 @@
             sCtx.closePath(); sCtx.fill();
             const starTex = new THREE.CanvasTexture(starCanvas);
             const starMat = new THREE.MeshBasicMaterial({ map: starTex, transparent: true, blending: THREE.AdditiveBlending });
-            starMesh = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), starMat);
-            starMesh.position.set(0, CONFIG.treeHeight/2 + 2, 0);
+            starMesh = new THREE.Mesh(new THREE.PlaneGeometry(17, 17), starMat);
+            starMesh.position.set(0, CONFIG.treeHeight/2 + 6, 0);
             scene.add(starMesh);
         }
 
