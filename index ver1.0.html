@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>a small Christmas gift 🎁</title>
+    
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000000; font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
+        #canvas-container { width: 100%; height: 100vh; display: block; }
+        
+        #intro-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; pointer-events: none; z-index: 100;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        #start-banner {
+            width: 80%; max-width: 450px; height: auto;
+            border: 3px solid #FFFFFF; border-radius: 20px;
+            margin-bottom: 30px; box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            object-fit: contain;
+        }
+        
+        .badge {
+            display: inline-block; background: rgba(0,0,0,0.7);
+            border: 2px solid #FFD700; color: #FFD700;
+            padding: 15px 35px; border-radius: 50px;
+            font-size: 24px; font-weight: 700; margin-bottom: 40px;
+            text-transform: uppercase; letter-spacing: 2px;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+            text-shadow: 0 0 15px #FFD700;
+            font-family: 'Be Vietnam Pro', sans-serif;
+        }
+
+        .guide { color: #ccc; font-size: 13px; margin-bottom: 20px; text-shadow: 0 2px 4px black; font-family: 'Be Vietnam Pro', sans-serif;}
+
+        button {
+            pointer-events: auto; cursor: pointer;
+            background: linear-gradient(to bottom, #D32F2F, #8B0000); 
+            color: #FFF; border: 2px solid #FFD700;
+            padding: 18px 60px; border-radius: 30px; 
+            font-weight: 800; font-size: 18px;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.6);
+            animation: pulse 1.5s infinite;
+            transition: transform 0.2s;
+            font-family: 'Be Vietnam Pro', sans-serif;
+        }
+        button:hover { transform: scale(1.05); }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        #loading-container {
+            position: absolute; bottom: 80px; width: 100%;
+            display: none; flex-direction: column; align-items: center;
+            pointer-events: none; z-index: 101;
+        }
+
+        #loading-bar-container {
+            width: 300px; height: 6px; background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px; overflow: hidden;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+
+        #loading-bar {
+            height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #FFA500);
+            border-radius: 10px; transition: width 0.3s ease;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); }
+            50% { box-shadow: 0 0 25px rgba(255, 215, 0, 1); }
+            100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); }
+        }
+
+        #loading-text {
+            color: #FFD700; font-size: 14px; margin-top: 12px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+            font-weight: 600;
+            font-family: 'Be Vietnam Pro', sans-serif;
+        }
+
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 100;
+            display: none; /* Hidden initially, shown after camera is ready */
+        }
+        
+        #status {
+            position: absolute; top: 15px; left: 15px;
+            margin: 0;
+            font-size: 18px;
+            padding: 10px 25px;
+        }
+        
+        #ui-layer .guide {
+            position: absolute; bottom: 30px; left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            width: auto;
+        }
+
+        #camera-preview {
+            position: absolute; top: 15px; right: 15px;
+            width: 180px; height: 135px;
+            border: 2px solid rgba(255,0,0,0.7); 
+            transform: scaleX(-1); opacity: 0.75; border-radius: 8px;
+            box-shadow: 0 0 10px rgba(255,0,0,0.5);
+        }
+        
+        #error-log { display: none; position: absolute; top: 0; left: 0; color: red; background: rgba(0,0,0,0.8); z-index: 999; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div id="error-log"></div>
+    <div id="intro-screen">
+        <img id="start-banner" src="start banner.jpg" alt="Christmas Banner">
+        <div class="badge">🎄 GIÁNG SINH AN LÀNH 🎄</div>
+        <button id="btnStart" onclick="startSystem()">BẮT ĐẦU</button>
+    </div>
+    <div id="loading-container">
+        <div id="loading-bar-container">
+            <div id="loading-bar"></div>
+        </div>
+        <div id="loading-text">Đang khởi tạo camera...</div>
+    </div>
+    <div id="ui-layer">
+        <div id="status" class="badge">🎄 GIÁNG SINH AN LÀNH 🎄</div>
+        <div class="guide">
+            🖐 <b>Xòe:</b> Bung Quà & Đèn &nbsp;|&nbsp; ✌️ <b>Say Hi:</b> Xem ảnh &nbsp;|&nbsp; ✊ <b>Nắm:</b> Thu nhỏ cây
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+    <video class="input_video" style="display:none"></video>
+    <canvas id="camera-preview" width="180" height="135"></canvas>
+
+    <script>
+        // ==========================================
+        // 1. Vandiep
+        // ==========================================
+        const MUSIC_URL = "./audio.mp3";
+        let bgMusic = new Audio(MUSIC_URL);
+        bgMusic.loop = true; bgMusic.volume = 0.6;
+
+        const loader = new THREE.TextureLoader();
+        const photoFiles = ['./image1.jpeg', './image2.jpeg', './image3.jpeg', './image4.jpg', './image5.jpg', './image6.jpeg', './image7.jpeg'];
+        const photoTextures = [];
+        const photoAspectRatios = []; // Store aspect ratios for each image
+        const photoMeshesRefs = []; // Store mesh references for updating geometries
+        
+        // Load textures and calculate aspect ratios
+        photoFiles.forEach((f, i) => {
+            photoTextures[i] = loader.load(f, (texture) => {
+                // Calculate aspect ratio when texture loads
+                const aspect = texture.image.width / texture.image.height;
+                photoAspectRatios[i] = aspect;
+                
+                // Update geometry if mesh already exists
+                if (photoMeshesRefs[i]) {
+                    updatePhotoGeometry(i, aspect);
+                }
+            });
+        });
+        
+        function updatePhotoGeometry(index, aspect) {
+            const baseHeight = 8;
+            const width = baseHeight * aspect;
+            const borderMargin = 0.5;
+            
+            const mesh = photoMeshesRefs[index];
+            if (mesh) {
+                // Update main geometry
+                mesh.geometry.dispose();
+                mesh.geometry = new THREE.PlaneGeometry(width, baseHeight);
+                
+                // Update border geometry
+                const border = mesh.children[0];
+                if (border) {
+                    border.geometry.dispose();
+                    border.geometry = new THREE.PlaneGeometry(width + borderMargin * 2, baseHeight + borderMargin * 2);
+                }
+            }
+        }
+
+        // --- Vandiep ---
+        function createCustomTexture(type) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            const cx = 64, cy = 64;
+
+            if (type === 'gold_glow') {
+                // Vandiep
+                const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 40);
+                grd.addColorStop(0, '#FFFFFF'); 
+                grd.addColorStop(0.2, '#FFFFE0'); 
+                grd.addColorStop(0.5, '#FFD700');
+                grd.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = grd; ctx.fillRect(0,0,128,128);
+
+            } else if (type === 'red_light') {
+                // Vandiep
+                const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
+                grd.addColorStop(0, '#FFAAAA'); 
+                grd.addColorStop(0.3, '#FF0000'); 
+                grd.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = grd; ctx.fillRect(0,0,128,128);
+
+            } else if (type === 'gift_red') {
+                // Vandiep
+                ctx.fillStyle = '#D32F2F'; // Vandiep
+                ctx.fillRect(20, 20, 88, 88);
+                ctx.fillStyle = '#FFD700'; // Vandiep
+                ctx.fillRect(54, 20, 20, 88); // Vandiep
+                ctx.fillRect(20, 54, 88, 20); // Vandiep
+                // Vandiep
+                ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth=2; ctx.strokeRect(20,20,88,88);
+            }
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const textures = {
+            gold: createCustomTexture('gold_glow'),
+            red: createCustomTexture('red_light'),
+            gift: createCustomTexture('gift_red')
+        };
+
+        // ==========================================
+        // 2. Vandiep
+        // ==========================================
+        const CONFIG = {
+            goldCount: 1000,    // Hạt vàng (reduced for better performance)
+            redCount: 150,      // Số lượng đèn đỏ (reduced for better performance)
+            giftCount: 75,      // Số lượng hộp quà (reduced for better performance)
+            explodeRadius: 65,  
+            photoOrbitRadius: 25,
+            treeHeight: 70,
+            treeBaseRadius: 35
+        };
+
+        let scene, camera, renderer;
+        let groupGold, groupRed, groupGift; // Vandiep
+        let photoMeshes = [];    
+        let titleMesh, starMesh;
+        
+        let state = 'TREE'; 
+        let selectedIndex = 0;
+        let handX = 0.5;
+        let stateChangeCounter = 0;
+        let lastState = 'TREE';
+        let handLostTime = 0;
+        let handLastSeen = true;
+        let previousHandX = 0.5;
+        let handVelocity = 0;
+        let rotationAngle = 0; // Direct rotation angle for sliding
+        let lockedRotationAngle = 0; // Locked rotation when viewing photo
+        let slideCooldownUntil = 0; // Time until sliding is temporarily disabled after stopping
+
+        // ==========================================
+        // 3. Vandiep
+        // ==========================================
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.002);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.z = 100;
+
+            renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false }); // Disabled antialiasing for better performance
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Reduced pixel ratio for better performance
+            container.appendChild(renderer.domElement);
+
+            // Vandiep
+            groupGold = createParticleSystem('gold', CONFIG.goldCount, 2.0);
+            groupRed = createParticleSystem('red', CONFIG.redCount, 3.5); // Vandiep
+            groupGift = createParticleSystem('gift', CONFIG.giftCount, 3.0); // Vandiep
+
+            createPhotos();
+            createDecorations();
+            animate();
+        }
+
+        function createParticleSystem(type, count, size) {
+            const pPositions = [];
+            const pExplodeTargets = [];
+            const pTreeTargets = [];
+            
+            for(let i=0; i<count; i++) {
+                // --- Vandiep ---
+                const h = Math.random() * CONFIG.treeHeight; 
+                const y = h - CONFIG.treeHeight / 2;
+                
+                // Vandiep
+                let radiusRatio = (type === 'gold') ? Math.sqrt(Math.random()) : 0.9 + Math.random()*0.1;
+                
+                const maxR = (1 - (h / CONFIG.treeHeight)) * CONFIG.treeBaseRadius;
+                const r = maxR * radiusRatio; 
+                const theta = Math.random() * Math.PI * 2;
+                
+                const tx = r * Math.cos(theta);
+                const tz = r * Math.sin(theta);
+                pTreeTargets.push(tx, y, tz);
+
+                // --- Vandiep ---
+                const u = Math.random();
+                const v = Math.random();
+                const phi = Math.acos(2 * v - 1);
+                const lam = 2 * Math.PI * u;
+                
+                // Vandiep
+                let radMult = (type === 'gift') ? 1.2 : 1.0;
+                const rad = CONFIG.explodeRadius * Math.cbrt(Math.random()) * radMult;
+
+                const ex = rad * Math.sin(phi) * Math.cos(lam);
+                const ey = rad * Math.sin(phi) * Math.sin(lam);
+                const ez = rad * Math.cos(phi);
+                pExplodeTargets.push(ex, ey, ez);
+
+                // Vandiep
+                pPositions.push(tx, y, tz);
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pPositions, 3));
+            geo.userData = { tree: pTreeTargets, explode: pExplodeTargets };
+
+            const mat = new THREE.PointsMaterial({
+                size: size,
+                map: textures[type],
+                transparent: true, opacity: 1.0,
+                // Vandiep
+                blending: (type === 'gift') ? THREE.NormalBlending : THREE.AdditiveBlending, 
+                depthWrite: false,
+                sizeAttenuation: true
+            });
+
+            const points = new THREE.Points(geo, mat);
+            scene.add(points);
+            return points;
+        }
+
+        function createPhotos() {
+            const borderMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 }); 
+            const baseHeight = 8; // Base height for all images
+
+            for(let i=0; i<photoFiles.length; i++) {
+                // Create geometry with aspect ratio (default to 1:1 if not loaded yet)
+                const aspect = photoAspectRatios[i] || 1.0;
+                const width = baseHeight * aspect;
+                const geo = new THREE.PlaneGeometry(width, baseHeight);
+                
+                // Border should match the image aspect ratio with a small margin
+                const borderMargin = 0.5;
+                const borderGeo = new THREE.PlaneGeometry(width + borderMargin * 2, baseHeight + borderMargin * 2);
+                
+                const mat = new THREE.MeshBasicMaterial({ 
+                    map: photoTextures[i], side: THREE.DoubleSide 
+                });
+                const mesh = new THREE.Mesh(geo, mat);
+                const border = new THREE.Mesh(borderGeo, borderMat);
+                border.position.z = -0.1; 
+                mesh.add(border);
+                
+                mesh.visible = false;
+                mesh.scale.set(0,0,0);
+                scene.add(mesh);
+                photoMeshes.push(mesh);
+                photoMeshesRefs[i] = mesh; // Store reference for geometry updates
+            }
+        }
+
+        function createDecorations() {
+            // Vandiep
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.font = '800 90px "Be Vietnam Pro", sans-serif';
+            ctx.fillStyle = '#FFD700'; ctx.textAlign = 'center';
+            ctx.shadowColor = "#FF0000"; ctx.shadowBlur = 40; 
+            ctx.fillText("MERRY CHRISTMAS", 512, 130);
+            
+            const tex = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending });
+            titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(60, 15), mat);
+            titleMesh.position.set(0, 50, 0);
+            scene.add(titleMesh);
+
+            // Vandiep
+            const starCanvas = document.createElement('canvas');
+            starCanvas.width = 128; starCanvas.height = 128;
+            const sCtx = starCanvas.getContext('2d');
+            sCtx.fillStyle = "#FFFF00"; sCtx.shadowColor="#FFF"; sCtx.shadowBlur=20;
+            sCtx.beginPath();
+            const cx=64, cy=64, outer=50, inner=20;
+            for(let i=0; i<5; i++){
+                sCtx.lineTo(cx + Math.cos((18+i*72)/180*Math.PI)*outer, cy - Math.sin((18+i*72)/180*Math.PI)*outer);
+                sCtx.lineTo(cx + Math.cos((54+i*72)/180*Math.PI)*inner, cy - Math.sin((54+i*72)/180*Math.PI)*inner);
+            }
+            sCtx.closePath(); sCtx.fill();
+            const starTex = new THREE.CanvasTexture(starCanvas);
+            const starMat = new THREE.MeshBasicMaterial({ map: starTex, transparent: true, blending: THREE.AdditiveBlending });
+            starMesh = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), starMat);
+            starMesh.position.set(0, CONFIG.treeHeight/2 + 2, 0);
+            scene.add(starMesh);
+        }
+
+        function updateParticleGroup(group, targetState, speed, handRotY, time, isBlinking) {
+            const positions = group.geometry.attributes.position.array;
+            const targetKey = (targetState === 'TREE') ? 'tree' : 'explode';
+            const targets = group.geometry.userData[(targetState === 'PHOTO') ? 'explode' : targetKey];
+
+            for(let i=0; i<positions.length; i += 3) {
+                // Update position towards target
+                positions[i] += (targets[i] - positions[i]) * speed;     // X
+                positions[i + 1] += (targets[i + 1] - positions[i + 1]) * speed; // Y
+                positions[i + 2] += (targets[i + 2] - positions[i + 2]) * speed; // Z
+                
+                // Add floating animation - always active (applied after lerp so it's always visible)
+                const particleIndex = i / 3;
+                const floatSpeed = 1.2; // Floating speed
+                const floatAmplitude = 4.0; // Increased amplitude for more visible floating
+                const phaseY = (particleIndex * 0.15) + (time * floatSpeed);
+                const phaseX = (particleIndex * 0.12) + (time * floatSpeed * 0.7); // Different phase for X
+                const phaseZ = (particleIndex * 0.18) + (time * floatSpeed * 0.9); // Different phase for Z
+                
+                // Apply floating offsets to all axes for more dynamic movement
+                positions[i] += Math.sin(phaseX) * floatAmplitude * 0.06; // X-axis floating
+                positions[i + 1] += Math.sin(phaseY) * floatAmplitude * 0.08; // Y-axis floating (vertical)
+                positions[i + 2] += Math.sin(phaseZ) * floatAmplitude * 0.06; // Z-axis floating
+            }
+            group.geometry.attributes.position.needsUpdate = true;
+            
+            // Vandiep
+            if (targetState === 'TREE') {
+                group.rotation.y += 0.003;
+                // Vandiep
+                if(isBlinking) {
+                    // Vandiep
+                    // Vandiep
+                    const scale = 1 + Math.sin(time * 5) * 0.2;
+                    group.scale.set(scale, scale, scale);
+                } else {
+                    group.scale.set(1,1,1);
+                }
+            } else {
+                group.scale.set(1,1,1);
+                group.rotation.y += (handRotY - group.rotation.y) * 0.12; // More responsive rotation
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.001;
+            const speed = 0.06;
+            
+            // Sliding control: use velocity for direct rotation when in EXPLODE state
+            if (state === 'EXPLODE') {
+                // Dead zone in center: reduce velocity when hand is near center (0.45-0.55)
+                const centerDeadZone = 0.05; // 5% dead zone on each side
+                const distanceFromCenter = Math.abs(handX - 0.5);
+                
+                if (distanceFromCenter < centerDeadZone) {
+                    // In dead zone: reduce velocity accumulation significantly
+                    handVelocity *= 0.7; // Faster decay when near center
+                    rotationAngle += handVelocity * 0.2; // Much less rotation in dead zone
+                } else {
+                    // Outside dead zone: normal sliding
+                    rotationAngle += handVelocity * 1.8; // Reduced scale for slower, more controlled sliding
+                    handVelocity *= 0.85; // Decay velocity (momentum)
+                }
+                // Remove position-based adjustment to prevent drift when returning to center
+            } else if (state === 'PHOTO') {
+                // Lock rotation when viewing photo - don't change it
+                rotationAngle = lockedRotationAngle;
+                handVelocity = 0; // Reset velocity
+            } else {
+                // For other states, use position-based rotation
+                rotationAngle = (handX - 0.5) * 2.5;
+            }
+            
+            const handRotY = rotationAngle;
+
+            // Vandiep
+            updateParticleGroup(groupGold, state, speed, handRotY, time, false);
+            updateParticleGroup(groupRed, state, speed, handRotY, time, true); // Vandiep
+            updateParticleGroup(groupGift, state, speed, handRotY, time, false);
+
+            // Vandiep
+            photoMeshes.forEach((mesh, i) => {
+                if(!mesh.material.map && photoTextures[i]) {
+                    mesh.material.map = photoTextures[i]; mesh.material.needsUpdate = true;
+                }
+            });
+
+            if (state === 'TREE') {
+                titleMesh.visible = true; starMesh.visible = true;
+                groupGold.visible = true; // Show all particles in TREE state
+                groupRed.visible = true;
+                groupGift.visible = true;
+                groupGold.renderOrder = 0;
+                groupRed.renderOrder = 0;
+                groupGift.renderOrder = 0;
+                titleMesh.scale.lerp(new THREE.Vector3(1,1,1), 0.1);
+                starMesh.rotation.z -= 0.02;
+                photoMeshes.forEach(m => { m.scale.lerp(new THREE.Vector3(0,0,0), 0.1); m.visible = false; m.renderOrder = 0; });
+
+            } else if (state === 'EXPLODE') {
+                titleMesh.visible = false; starMesh.visible = false;
+                groupGold.visible = true; // Show all particles in EXPLODE state
+                groupRed.visible = true;
+                groupGift.visible = true;
+                groupGold.renderOrder = 0;
+                groupRed.renderOrder = 0;
+                groupGift.renderOrder = 0;
+                
+                const baseAngle = groupGold.rotation.y; 
+                const angleStep = (Math.PI * 2) / photoFiles.length;
+                let bestIdx = 0; let maxZ = -999;
+
+                photoMeshes.forEach((mesh, i) => {
+                    mesh.visible = true;
+                    const angle = baseAngle + i * angleStep;
+                    const x = Math.sin(angle) * CONFIG.photoOrbitRadius;
+                    const z = Math.cos(angle) * CONFIG.photoOrbitRadius;
+                    const y = Math.sin(time + i) * 3; 
+
+                    mesh.position.lerp(new THREE.Vector3(x, y, z), 0.15); // Faster response to hand movement
+                    mesh.lookAt(camera.position);
+
+                    if (z > maxZ) { maxZ = z; bestIdx = i; }
+                    
+                    if (z > 5) { 
+                        const distScale = 1.0 + (z / CONFIG.photoOrbitRadius) * 0.8; 
+                        mesh.scale.lerp(new THREE.Vector3(distScale, distScale, distScale), 0.1);
+                    } else {
+                        mesh.scale.lerp(new THREE.Vector3(0.6, 0.6, 0.6), 0.1);
+                    }
+                });
+                selectedIndex = bestIdx;
+
+            } else if (state === 'PHOTO') {
+                // Keep particles visible but ensure photo renders on top
+                groupGold.visible = true;
+                groupRed.visible = true;
+                groupGift.visible = true;
+                
+                // Set render order so photo appears in front of particles
+                groupGold.renderOrder = 0;
+                groupRed.renderOrder = 0;
+                groupGift.renderOrder = 0;
+                
+                photoMeshes.forEach((mesh, i) => {
+                    if (i === selectedIndex) {
+                        // Position photo closer to camera (z=75) to ensure it's in front of all particles
+                        mesh.position.lerp(new THREE.Vector3(0, 0, 75), 0.1);
+                        mesh.scale.lerp(new THREE.Vector3(2.5, 2.5, 2.5), 0.1); // Reduced scale to prevent overflow
+                        mesh.lookAt(camera.position);
+                        mesh.rotation.z = 0;
+                        mesh.renderOrder = 100; // Higher render order to appear in front
+                        if (mesh.children[0]) mesh.children[0].renderOrder = 100; // Border also in front
+                    } else {
+                        mesh.scale.lerp(new THREE.Vector3(0,0,0), 0.1);
+                        mesh.renderOrder = 0;
+                    }
+                });
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // ==========================================
+        // 4. Vandiep
+        // ==========================================
+        function startSystem() {
+            // Hide intro screen and show loading
+            document.getElementById('intro-screen').style.display = 'none';
+            document.getElementById('loading-container').style.display = 'flex';
+            const loadingBar = document.getElementById('loading-bar');
+            const loadingText = document.getElementById('loading-text');
+            
+            // Simulate loading progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15 + 5; // Random increment between 5-20%
+                if (progress > 90) progress = 90; // Cap at 90% until camera is ready
+                loadingBar.style.width = progress + '%';
+            }, 200);
+            
+            bgMusic.play().catch(e => console.log(e));
+            init3D();
+
+            const video = document.getElementsByClassName('input_video')[0];
+            const canvas = document.getElementById('camera-preview');
+            const ctx = canvas.getContext('2d');
+            const statusDiv = document.getElementById('status');
+            
+            // Initialize sliding variables
+            previousHandX = 0.5;
+            handVelocity = 0;
+            rotationAngle = 0;
+            lockedRotationAngle = 0;
+            slideCooldownUntil = 0;
+            
+            let frameCnt = 0;
+            let cameraReady = false;
+            const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.4, minTrackingConfidence: 0.4 });
+
+            hands.onResults(results => {
+                // Camera is ready - complete loading
+                if (!cameraReady) {
+                    cameraReady = true;
+                    clearInterval(progressInterval);
+                    loadingBar.style.width = '100%';
+                    setTimeout(() => {
+                        document.getElementById('loading-container').style.display = 'none';
+                        document.getElementById('ui-layer').style.display = 'block'; // Show UI layer after camera is ready
+                    }, 500);
+                }
+                ctx.clearRect(0,0,180,135); ctx.drawImage(results.image, 0, 0, 180, 135);
+
+                if(results.multiHandLandmarks.length > 0) {
+                    handLastSeen = true;
+                    handLostTime = 0;
+                    const lm = results.multiHandLandmarks[0];
+                    // Get raw hand position
+                    const rawHandX = lm[9].x;
+                    
+                    // Calculate velocity (movement delta) for sliding
+                    if (previousHandX !== undefined && previousHandX !== null) {
+                        const deltaX = rawHandX - previousHandX;
+                        
+                        const now = Date.now();
+                        const STOP_THRESHOLD = 0.015; // Considered 'stop' if movement is very small
+                        const COOLDOWN_MS = 350;      // Disable sliding for 350ms after stop
+
+                        if (Math.abs(deltaX) < STOP_THRESHOLD) {
+                            // Hand has effectively stopped: start cooldown and kill velocity
+                            slideCooldownUntil = now + COOLDOWN_MS;
+                            handVelocity = 0;
+                        } else if (now < slideCooldownUntil) {
+                            // Still in cooldown: ignore new sliding input
+                            handVelocity = 0;
+                        } else {
+                            // Normal sliding: compute velocity, with less effect near center
+                            const distanceFromCenter = Math.abs(rawHandX - 0.5);
+                            const centerDeadZone = 0.05;
+                            const velocityScale = (distanceFromCenter < centerDeadZone) ? 0.2 : 1.0;
+                            handVelocity = deltaX * velocityScale;
+                        }
+                    } else {
+                        handVelocity = 0; // First frame, no velocity yet
+                    }
+                    
+                    // Update positions
+                    previousHandX = rawHandX;
+                    handX = rawHandX; // Use raw position for more responsive control 
+
+                    const tips = [8,12,16,20];
+                    const wrist = lm[0];
+                    let openDist = 0;
+                    tips.forEach(i => openDist += Math.hypot(lm[i].x-wrist.x, lm[i].y-wrist.y));
+                    const avgDist = openDist / 4;
+                    
+                    // 2-finger gesture detection: index (8) and middle (12) extended, ring (16) and pinky (20) closed
+                    const indexDist = Math.hypot(lm[8].x-wrist.x, lm[8].y-wrist.y);
+                    const middleDist = Math.hypot(lm[12].x-wrist.x, lm[12].y-wrist.y);
+                    const ringDist = Math.hypot(lm[16].x-wrist.x, lm[16].y-wrist.y);
+                    const pinkyDist = Math.hypot(lm[20].x-wrist.x, lm[20].y-wrist.y);
+                    
+                    // Check if index and middle are extended (far from wrist) and ring/pinky are closed (close to wrist)
+                    const twoFingersExtended = (indexDist > 0.25 && middleDist > 0.25) && 
+                                               (ringDist < 0.20 && pinkyDist < 0.20);
+
+                    // More forgiving thresholds with hysteresis to prevent rapid switching
+                    let newState = state;
+                    const HYSTERESIS = 3; // Require 3 consecutive frames to change state
+                    
+                    if (avgDist < 0.20) { 
+                        newState = 'TREE';
+                    } else if (twoFingersExtended) { // 2-finger gesture for viewing picture
+                        newState = 'PHOTO';
+                    } else {
+                        newState = 'EXPLODE'; 
+                    }
+
+                    // Smooth state transitions with hysteresis
+                    if (newState !== lastState) {
+                        stateChangeCounter = 0;
+                        lastState = newState;
+                    } else if (newState === lastState && newState !== state) {
+                        stateChangeCounter++;
+                        if (stateChangeCounter >= HYSTERESIS) {
+                            const previousState = state;
+                            state = newState;
+                            stateChangeCounter = 0;
+                            
+                            // Lock rotation when entering PHOTO state
+                            if (state === 'PHOTO' && previousState !== 'PHOTO') {
+                                lockedRotationAngle = rotationAngle;
+                                handVelocity = 0; // Reset velocity
+                            }
+                            // Reset velocity when leaving PHOTO state to prevent unwanted sliding
+                            if (state !== 'PHOTO' && previousState === 'PHOTO') {
+                                handVelocity = 0;
+                            }
+                        }
+                    } else {
+                        stateChangeCounter = 0;
+                    }
+
+                    // Update status display
+                    if (state === 'TREE') {
+                        statusDiv.innerText = "✊ Thu Cây Thông"; statusDiv.style.color = "#FFD700";
+                    } else if (state === 'PHOTO') {
+                        statusDiv.innerText = "✌️ Xem Ảnh"; statusDiv.style.color = "#00FFFF";
+                    } else {
+                        statusDiv.innerText = "🖐 Bung Quà & Ảnh"; statusDiv.style.color = "#FFA500";
+                    }
+                } else {
+                    // Hand lost - maintain state for 2 seconds before resetting
+                    if (handLastSeen) {
+                        handLostTime = Date.now();
+                        handLastSeen = false;
+                    }
+                    
+                    // Decay velocity smoothly when hand is lost
+                    handVelocity *= 0.9;
+                    
+                    const timeSinceLost = Date.now() - handLostTime;
+                    const RESET_DELAY = 2000; // 2 seconds
+                    
+                    if (timeSinceLost > RESET_DELAY) {
+                        // Only reset after delay
+                        state = 'TREE'; 
+                        stateChangeCounter = 0;
+                        lastState = 'TREE';
+                        handVelocity = 0; // Reset velocity
+                        statusDiv.innerText = "🎄 GIÁNG SINH AN LÀNH 🎄"; statusDiv.style.color = "#FFF";
+                    } else {
+                        // Keep current state and show warning
+                        if (state !== 'TREE') {
+                            statusDiv.innerText = "⚠️ Đưa tay vào khung hình"; statusDiv.style.color = "#FFA500";
+                        }
+                    }
+                    // Keep last handX position so rotation continues smoothly
+                }
+            });
+
+            const cameraUtils = new Camera(video, {
+                onFrame: async () => {
+                    frameCnt++; if(frameCnt%2 !== 0) return; // Process every 2nd frame for better responsiveness
+                    await hands.send({image: video});
+                }, 
+                width: 320, 
+                height: 240
+            });
+            cameraUtils.start().catch((error) => {
+                // Handle camera initialization error
+                clearInterval(progressInterval);
+                loadingText.textContent = 'Lỗi khởi tạo camera. Vui lòng thử lại.';
+                loadingText.style.color = '#FF4444';
+                console.error('Camera error:', error);
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            if(camera) { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+        });
+        function logError(e) { document.getElementById('error-log').style.display='block'; document.getElementById('error-log').innerText+=e+"\n"; }
+    </script>
+</body>
+</html>
