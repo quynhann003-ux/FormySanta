@@ -132,18 +132,18 @@
     <div id="intro-screen">
         <img id="start-banner" src="start banner.jpg" alt="Christmas Banner">
         <div class="badge">🎄 Merry Chrismas 🎄</div>
-        <button id="btnStart" onclick="startSystem()">BẮT ĐẦU</button>
+        <button id="btnStart" onclick="startSystem()">START</button>
     </div>
     <div id="loading-container">
         <div id="loading-bar-container">
             <div id="loading-bar"></div>
         </div>
-        <div id="loading-text">Đang khởi tạo camera...</div>
+        <div id="loading-text">Loading...</div>
     </div>
     <div id="ui-layer">
         <div id="status" class="badge">🎄 Merry Chrismas 🎄</div>
         <div class="guide">
-            🖐 <b>Xòe:</b> Bung Quà & Đèn &nbsp;|&nbsp; ✌️ <b>Say Hi:</b> Xem ảnh &nbsp;|&nbsp; ✊ <b>Nắm:</b> Thu nhỏ cây
+            🖐 <b>Xòe:</b> Open &nbsp;|&nbsp; ✌️ <b>Say Hi:</b> Zoom &nbsp;|&nbsp; ✊ <b>Nắm:</b> Tree
         </div>
     </div>
 
@@ -755,11 +755,11 @@
                         stateChangeCounter = 0;
                         lastState = 'TREE';
                         handVelocity = 0; // Reset velocity
-                        statusDiv.innerText = "🎄 GIÁNG SINH AN LÀNH 🎄"; statusDiv.style.color = "#FFF";
+                        statusDiv.innerText = "🎄 Merry Christmas 🎄"; statusDiv.style.color = "#FFF";
                     } else {
                         // Keep current state and show warning
                         if (state !== 'TREE') {
-                            statusDiv.innerText = "⚠️ Đưa tay vào khung hình"; statusDiv.style.color = "#FFA500";
+                            statusDiv.innerText = "Give me your hand"; statusDiv.style.color = "#FFA500";
                         }
                     }
                     // Keep last handX position so rotation continues smoothly
@@ -777,7 +777,7 @@
             cameraUtils.start().catch((error) => {
                 // Handle camera initialization error
                 clearInterval(progressInterval);
-                loadingText.textContent = 'Lỗi khởi tạo camera. Vui lòng thử lại.';
+                loadingText.textContent = 'Try again';
                 loadingText.style.color = '#FF4444';
                 console.error('Camera error:', error);
             });
