@@ -143,7 +143,7 @@
     <div id="ui-layer">
         <div id="status" class="badge">🎄 Merry Chrismas 🎄</div>
         <div class="guide">
-            🖐 <b>Xòe:</b> Open &nbsp;|&nbsp; ✌️ <b>Say Hi:</b> Zoom &nbsp;|&nbsp; ✊ <b>Nắm:</b> Tree
+            🖐 <b>Open:</b> Gift &nbsp;|&nbsp; ✌️ <b>Say Hi:</b> Zoom &nbsp;|&nbsp; ✊ <b>Hold:</b> Tree
         </div>
     </div>
 
@@ -730,11 +730,11 @@
 
                     // Update status display
                     if (state === 'TREE') {
-                        statusDiv.innerText = "✊ Thu Cây Thông"; statusDiv.style.color = "#FFD700";
+                        statusDiv.innerText = "✊ Christmas Tree"; statusDiv.style.color = "#FFD700";
                     } else if (state === 'PHOTO') {
-                        statusDiv.innerText = "✌️ Xem Ảnh"; statusDiv.style.color = "#00FFFF";
+                        statusDiv.innerText = "✌️ Photo"; statusDiv.style.color = "#00FFFF";
                     } else {
-                        statusDiv.innerText = "🖐 Bung Quà & Ảnh"; statusDiv.style.color = "#FFA500";
+                        statusDiv.innerText = "🖐 Open"; statusDiv.style.color = "#FFA500";
                     }
                 } else {
                     // Hand lost - maintain state for 2 seconds before resetting
