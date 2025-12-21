@@ -246,8 +246,8 @@
         // 2. Vandiep
         // ==========================================
         const CONFIG = {
-            goldCount: 2000,    // Hạt vàng (reduced for better performance)
-            redCount: 700,      // Số lượng đèn đỏ (reduced for better performance)
+            goldCount: 1000,    // Hạt vàng (reduced for better performance)
+            redCount: 500,      // Số lượng đèn đỏ (reduced for better performance)
             giftCount: 175,      // Số lượng hộp quà (reduced for better performance)
             explodeRadius: 100,  
             photoOrbitRadius: 25,
@@ -291,7 +291,7 @@
 
             // Vandiep
             groupGold = createParticleSystem('gold', CONFIG.goldCount, 3.0);
-            groupRed = createParticleSystem('red', CONFIG.redCount, 2.5); // Vandiep
+            groupRed = createParticleSystem('red', CONFIG.redCount, 1.5); // Vandiep
             groupGift = createParticleSystem('gift', CONFIG.giftCount, 2.0); // Vandiep
 
             createPhotos();
